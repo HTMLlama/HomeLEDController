@@ -22,7 +22,7 @@ CRGBArray<NUM_LED> leds;
 #define MURICA 11
 #define XYLON 12
 #define FX_TOTAL 13
-int fx = PCMR;
+int fx = 0;
 bool isXmasSet = false;
 int fadeHue = 100;
 
@@ -65,6 +65,38 @@ void lightSection(int blockSize) {
         }
       } 
     }
+}
+
+void setFx(String selectedFx) {
+  if (selectedFx == "solid") {
+    fx = SOLID;
+  } else if(selectedFx == "pcmr") {
+    fx = PCMR;
+  } else if(selectedFx == "small") {
+    fx = SMALL;
+  } else if(selectedFx == "med") {
+    fx = MED;
+  } else if(selectedFx == "large") {
+    fx = LARGE;
+  } else if(selectedFx == "xl") {
+    fx = XL;
+  } else if(selectedFx == "xxl") {
+    fx = XXL;
+  } else if(selectedFx == "color_fade") {
+    fx = COLOR_FADE;
+  } else if(selectedFx == "pride") {
+    fx = PRIDE;
+  } else if(selectedFx == "xmas") {
+    fx = XMAS;
+  } else if(selectedFx == "solid2") {
+    fx = SOLID2;
+  } else if(selectedFx == "murica") {
+    fx = MURICA;
+  } else if(selectedFx == "xylon") {
+    fx = XYLON;
+  } else {
+    pubSubClient.publish("error/livingroom/leds", "Invalid Effect", 2);
+  }
 }
 
 void maybeBuildXmas() {
@@ -150,13 +182,8 @@ void displayLights() {
 
     case XYLON:
       for(int i = 0; i < NUM_LED/2; i++) {   
-        // fade everything out
         leds.fadeToBlackBy(40);
-
-        // let's set an led value
         leds[i] = CHSV(hue++,255,255);
-
-        // now, let's first 20 leds to the top 20 leds, 
         leds(NUM_LED/2,NUM_LED-1) = leds(NUM_LED/2 - 1 ,0);
         FastLED.delay(33);
       }
@@ -182,10 +209,25 @@ void callback(char* topic, byte* message, unsigned int lenght) {
     messageTemp += (char) message[i];
   }
 
+  String topicStr(topic);
+  String category = topicStr.substring(16);
+
+  if (category == "fx") {
+    setFx(messageTemp);
+  }
+
+  delay(100);
+  Serial.print("Topic in: ");
+  Serial.println(topic);
+  Serial.print("Message in: ");
+  Serial.println(messageTemp);
+
   Serial.print("Message on Topic: ");
   Serial.println(topic);
   Serial.print("Message: ");
-  Serial.println(messageTemp);
+  Serial.println(messageTemp.toInt());
+
+  delay(200);
 }
 
 void setupWifi() {
@@ -217,7 +259,7 @@ void reconnectToPubSub() {
     Serial.println("MQTT Connecting...");
     if (pubSubClient.connect("ESP32Client")) {
       Serial.println("Connected to MQTT!");
-      pubSubClient.subscribe("esp32/output");
+      pubSubClient.subscribe("livingroom/leds/#");
     } else {
       Serial.println("Failed to connect to MQTT");
       Serial.print("State: ");
@@ -250,7 +292,6 @@ void loop() {
   }
   pubSubClient.loop();
 
-  EVERY_N_SECONDS(15) { pubSubClient.publish("test", "I made cool LEDS!"); }
   EVERY_N_MILLISECONDS(20) { displayLights(); }
   
 }
