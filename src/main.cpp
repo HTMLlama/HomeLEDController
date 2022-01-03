@@ -3,9 +3,11 @@
 #include <PubSubClient.h>
 #include <keys.h>
 #include <FastLED.h>
+#include <soc/soc.h>
+#include <soc/rtc_cntl_reg.h>
 
 #define LED_PIN 16
-#define NUM_LED 20
+#define NUM_LED 270
 CRGBArray<NUM_LED> leds;
 
 #define SOLID 0
@@ -21,19 +23,27 @@ CRGBArray<NUM_LED> leds;
 #define SOLID2 10
 #define MURICA 11
 #define XYLON 12
-#define FX_TOTAL 13
+#define BOXES 13
+#define FX_TOTAL 14
 int fx = 0;
 bool isXmasSet = false;
 int fadeHue = 100;
 
-int hue = 255;
-int hue2 = 100;
-int sat = 255;
-int sat2 = 255;
-int val = 255;
-int val2 = 255;
 int pcmrHue = 0;
 int bgt = 200;
+String rgbStr1 = "FFFFFF";
+String rgbStr2 = "00FF00";
+CRGB backColor = CRGB::SlateBlue;
+CRGB box1Color = CRGB::Tomato;
+CRGB box2Color = CRGB::Aqua;
+CRGB box3Color = CRGB::Green;
+CRGB box4Color = CRGB::Indigo;
+CRGB box5Color = CRGB::Lavender;
+CRGB box6Color = CRGB::LemonChiffon;
+CRGB box7Color = CRGB::Salmon;
+CRGB box8Color = CRGB::SeaGreen;
+CRGB box9Color = CRGB::SkyBlue;
+CRGB box10Color = CRGB::Violet;
 
 WiFiClient wiFiClient;
 PubSubClient pubSubClient(wiFiClient);
@@ -52,19 +62,63 @@ int roller(int item) {
   return item;
 }
 
+unsigned long toColorCode(String colorHex) {
+  int len = colorHex.length() + 1;
+  char hexArray[len];
+  colorHex.toCharArray(hexArray, len);
+  unsigned long color = strtoul(hexArray, NULL, 16);
+  return color;
+}
+
 void lightSection(int blockSize) {
   for (size_t i = 0; i < NUM_LED; i+=blockSize*2) {
       for (size_t n = 0; n < blockSize; n++) {
         int indexA = i+n;
         int indexB = i+n+blockSize;
         if (indexA < NUM_LED) {
-          leds[indexA] = CRGB().setHSV(hue, sat, val);
+          leds[indexA] = CRGB().setColorCode(toColorCode(rgbStr1));
         }
         if (indexB < NUM_LED) {
-          leds[indexB] = CRGB().setHSV(hue2, sat2, val2);;
+          leds[indexB] = CRGB().setColorCode(toColorCode(rgbStr2));
         }
       } 
     }
+}
+
+void lightBoxes() {
+  for (size_t i = 0; i < 90; i++) {
+    leds[i] = backColor;
+  }
+  for (size_t i = 90; i < 105; i++) {
+    leds[i] = box1Color;
+  }
+  for (size_t i = 105; i < 120; i++) {
+    leds[i] = box2Color;
+  }
+  for (size_t i = 120; i < 135; i++) {
+    leds[i] = box3Color;
+  }
+  for (size_t i = 135; i < 150; i++) {
+    leds[i] = box4Color;
+  }
+  for (size_t i = 150; i < 165; i++) {
+    leds[i] = box5Color;
+  }
+  for (size_t i = 165; i < 180; i++) {
+    leds[i] = box6Color;
+  }
+  for (size_t i = 180; i < 195; i++) {
+    leds[i] = box7Color;
+  }
+  for (size_t i = 195; i < 210; i++) {
+    leds[i] = box8Color;
+  }
+  for (size_t i = 210; i < 240; i++) {
+    leds[i] = box9Color;
+  }
+  for (size_t i = 240; i < 270; i++) {
+    leds[i] = box10Color;
+  }
 }
 
 void setFx(String selectedFx) {
@@ -94,6 +148,8 @@ void setFx(String selectedFx) {
     fx = MURICA;
   } else if(selectedFx == "xylon") {
     fx = XYLON;
+  } else if(selectedFx == "boxes") {
+    fx = BOXES;
   } else {
     pubSubClient.publish("error/livingroom/leds", "Invalid Effect", 2);
   }
@@ -122,23 +178,23 @@ void displayLights() {
       break;
 
     case SMALL:
-      lightSection(8);
+      lightSection(5);
       break;
     
     case MED:
-      lightSection(12);
+      lightSection(10);
       break;
 
     case LARGE:
-      lightSection(18);
+      lightSection(15);
       break;
 
     case XL:
-      lightSection(26);
+      lightSection(30);
       break;
 
     case XXL:
-      lightSection(34);
+      lightSection(90);
       break;
     
     case MURICA:
@@ -161,7 +217,7 @@ void displayLights() {
       break;
 
     case PRIDE:
-      fill_rainbow( leds, NUM_LED, hue, 2);
+      fill_rainbow(leds, NUM_LED, pcmrHue, 2);
       break;
 
     case XMAS:
@@ -170,7 +226,7 @@ void displayLights() {
 
     case SOLID2:
       for(int i = 0; i < NUM_LED; i++) {
-        leds[i] = CRGB().setHSV(hue2, sat2, val2);
+        leds[i] = CRGB().setColorCode(toColorCode(rgbStr2));
       }
       break;
 
@@ -183,16 +239,19 @@ void displayLights() {
     case XYLON:
       for(int i = 0; i < NUM_LED/2; i++) {   
         leds.fadeToBlackBy(40);
-        leds[i] = CHSV(hue++,255,255);
+        leds[i] = CHSV(pcmrHue++,255,255);
         leds(NUM_LED/2,NUM_LED-1) = leds(NUM_LED/2 - 1 ,0);
         FastLED.delay(33);
       }
       break;
+
+    case BOXES:
+      lightBoxes();
+      break;
     
     default:
-
       for(int i = 0; i < NUM_LED; i++) {
-        leds[i] = CRGB().setHSV(hue, sat, val);
+        leds[i] = CRGB().setColorCode(toColorCode(rgbStr1));
       }
       break;
   }
@@ -214,20 +273,42 @@ void callback(char* topic, byte* message, unsigned int lenght) {
 
   if (category == "fx") {
     setFx(messageTemp);
+  } else if (category == "rgb1") {
+    rgbStr1 = messageTemp;
+  } else if (category == "rgb2") {
+    rgbStr2 = messageTemp;
+  } else if (category == "bgt") {
+    bgt = messageTemp.toInt();
+  } else if (category == "box0") {
+    backColor = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box1") {
+    box1Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box2") {
+    box2Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box3") {
+    box3Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box4") {
+    box4Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box5") {
+    box5Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box6") {
+    box6Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box7") {
+    box7Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box8") {
+    box8Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box9") {
+    box9Color = CRGB().setColorCode(toColorCode(messageTemp));
+  } else if (category == "box10") {
+    box10Color = CRGB().setColorCode(toColorCode(messageTemp));
   }
-
+  
   delay(100);
   Serial.print("Topic in: ");
   Serial.println(topic);
   Serial.print("Message in: ");
   Serial.println(messageTemp);
-
-  Serial.print("Message on Topic: ");
-  Serial.println(topic);
-  Serial.print("Message: ");
-  Serial.println(messageTemp.toInt());
-
-  delay(200);
+  // delay(200);
 }
 
 void setupWifi() {
@@ -276,6 +357,8 @@ void setupLeds() {
 }
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
   Serial.begin(115200);
 
   setupWifi();
@@ -283,6 +366,8 @@ void setup() {
   setupLeds();
 
   delay(1500);
+
+  pubSubClient.publish("livingroom/leds/boot", "1", 2);
 }
 
 void loop() {
@@ -293,5 +378,6 @@ void loop() {
   pubSubClient.loop();
 
   EVERY_N_MILLISECONDS(20) { displayLights(); }
+  EVERY_N_MINUTES(10) { fadeHue = roller(fadeHue); }
   
 }
