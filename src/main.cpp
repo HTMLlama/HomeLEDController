@@ -353,6 +353,7 @@ void reconnectToPubSub() {
 
 void setupLeds() {
   FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, NUM_LED);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 1000);
   FastLED.setBrightness(bgt);
 }
 
