@@ -6,3 +6,5 @@
 src/keys.h
 
 .DS_Store
+
+*.code-workspace

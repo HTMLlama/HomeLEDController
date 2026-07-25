@@ -6,7 +6,7 @@
 #include <soc/soc.h>
 #include <soc/rtc_cntl_reg.h>
 
-#define LED_PIN 16
+#define LED_PIN 14
 #define NUM_LED 270
 CRGBArray<NUM_LED> leds;
 
@@ -25,7 +25,7 @@ CRGBArray<NUM_LED> leds;
 #define XYLON 12
 #define BOXES 13
 #define FX_TOTAL 14
-int fx = 0;
+int fx = 13;
 bool isXmasSet = false;
 int fadeHue = 100;
 
@@ -338,7 +338,7 @@ void setupPubSub() {
 void reconnectToPubSub() {
   while(!pubSubClient.connected()) {
     Serial.println("MQTT Connecting...");
-    if (pubSubClient.connect("ESP32Client")) {
+    if (pubSubClient.connect("ESP32Client_livingroom_box_leds", MQTT_UN, MQTT_PWD)) {
       Serial.println("Connected to MQTT!");
       pubSubClient.subscribe("livingroom/leds/#");
     } else {
