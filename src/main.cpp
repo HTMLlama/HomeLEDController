@@ -5,6 +5,7 @@
 #include <FastLED.h>
 #include <soc/soc.h>
 #include <soc/rtc_cntl_reg.h>
+#include <ArduinoOTA.h>
 
 #define LED_PIN 14
 #define NUM_LED 270
@@ -50,6 +51,8 @@ PubSubClient pubSubClient(wiFiClient);
 long lastMessage = 0;
 char msg[100];
 int value = 0;
+
+unsigned long lastReconnectAttempt = 0;
 
 const char* LB = "-------------------------------";
 
@@ -336,19 +339,48 @@ void setupPubSub() {
 }
 
 void reconnectToPubSub() {
-  while(!pubSubClient.connected()) {
+  unsigned long now = millis();
+  if (now - lastReconnectAttempt > 5000) {
+    lastReconnectAttempt = now;
     Serial.println("MQTT Connecting...");
     if (pubSubClient.connect("ESP32Client_livingroom_box_leds", MQTT_UN, MQTT_PWD)) {
       Serial.println("Connected to MQTT!");
       pubSubClient.subscribe("livingroom/leds/#");
-    } else {
-      Serial.println("Failed to connect to MQTT");
-      Serial.print("State: ");
-      Serial.println(pubSubClient.state());
-      Serial.println("Trying again in 5 seconds...");
-      delay(5000);
     }
   }
+}
+
+void setupOTA() {
+  ArduinoOTA.setHostname("esp32-livingroom-leds");
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH) {
+      type = "sketch";
+    } else { // U_SPIFFS
+      type = "filesystem";
+    }
+    Serial.println("Start updating " + type);
+  });
+  
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+  });
+
+  ArduinoOTA.begin();
 }
 
 void setupLeds() {
@@ -364,6 +396,7 @@ void setup() {
 
   setupWifi();
   setupPubSub();
+  setupOTA();
   setupLeds();
 
   delay(1500);
@@ -373,10 +406,11 @@ void setup() {
 
 void loop() {
 
-  if (!pubSubClient.connected()){
+  if (!pubSubClient.connected()) {
     reconnectToPubSub();
+  } else {
+    pubSubClient.loop();
   }
-  pubSubClient.loop();
 
   EVERY_N_MILLISECONDS(20) { displayLights(); }
   EVERY_N_MINUTES(10) { fadeHue = roller(fadeHue); }
